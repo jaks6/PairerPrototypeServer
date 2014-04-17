@@ -1,4 +1,5 @@
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import javax.servlet.ServletContext;
@@ -33,11 +34,13 @@ import org.json.simple.JSONObject;
 
 	@Override
 	public void contextInitialized(ServletContextEvent e) {
-		final BlockingQueue<JSONObject> queue = new LinkedBlockingQueue<JSONObject>();
 		log.info("Context Created");
+		final BlockingQueue<JSONObject> queue = new LinkedBlockingQueue<JSONObject>();
+		final ConcurrentHashMap<String, JSONObject> instructionMap = new ConcurrentHashMap<String, JSONObject>();
 		
 		ServletContext ctx = e.getServletContext();
 		ctx.setAttribute("queue", queue);
+		ctx.setAttribute("instructionmap", instructionMap);
 		
 		thread = new WorkThread(queue);
 		thread.start();
