@@ -82,6 +82,6 @@ public class Sequence extends HttpServlet {
 		if (instructionsJson != null){
 			return instructionsJson.toString();
 		}
-		return "";
+		return "{}";
 	}
 }

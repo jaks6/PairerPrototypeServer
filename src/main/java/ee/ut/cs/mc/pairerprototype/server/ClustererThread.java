@@ -3,6 +3,8 @@ package ee.ut.cs.mc.pairerprototype.server;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
+import java.util.SortedSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -79,7 +81,9 @@ public class ClustererThread extends Thread {
 		JSONObject instructions = new JSONObject();
 		if (connectToMac!= null) instructions.put("connectto", connectToMac);
 		instructions.put("listen", beHost);
-		instructions.put("group", ds.classes());
+		JSONArray group = new JSONArray();
+		for (Object groupMember: ds.classes()) group.add((String)groupMember);
+		instructions.put("group", group);
 		log.info("**Storing instructions for="+ deviceMac+ " i="+instanceIndex+", instructions are=" + instructions.toString());
 		instructionsMap.put(deviceMac, instructions);
 	}
