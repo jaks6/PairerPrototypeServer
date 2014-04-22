@@ -3,6 +3,7 @@ package ee.ut.cs.mc.pairerprototype.server;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import javax.servlet.ServletContext;
@@ -40,7 +41,7 @@ public class Sequence extends HttpServlet {
 			JSONObject o2 = (JSONObject) new JSONParser().parse("{\"timestamp\":1396434160113,\r\n" + 
 					"\"sequence\":[0,0,1,175,19433,8218,30529,7085,2748,30699,30494,29451,13379,4354,30446,3506,8162,18571,19435,8014,23051,16371,19070,8538,17557,12878,21543,11494,7749,12055,6778,581,19,371,4467,15522,18446,14175,12756,6916,6830,19307,4299,2859,1624,19,21,19,19,19],\r\n" + 
 					"\"device\":\"Nexus 5_2\"}");
-			WorkThread.testDTW(o1,o2);
+//			WorkThread.testDTW(o1,o2);
 		} catch (ParseException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -59,12 +60,15 @@ public class Sequence extends HttpServlet {
 					//add JSON object from request to a queue, from which a WorkThread will gather it and process it
 					JSONObject receivedJson = getJSONFromRequest(request);
 					ServletContext ctx = getServletContext();
-					final BlockingQueue<JSONObject> queue = (LinkedBlockingQueue<JSONObject>) ctx.getAttribute("dataQueue");
+					BlockingQueue<JSONObject> queue = 
+							(LinkedBlockingQueue<JSONObject>) ctx.getAttribute("queue");
+					ConcurrentHashMap<String, JSONObject> instructionMap = 
+							(ConcurrentHashMap<String, JSONObject>) ctx.getAttribute("instructionmap");
 					queue.add(receivedJson);
 					
 					
-					
-					reply = MockResponse((String)receivedJson.get("mac"));
+					String requesterMac = (String)receivedJson.get("mac");
+					reply = MockResponse(requesterMac);
 				}
 				else if (reqType.equals("signOn")){
 					
@@ -103,17 +107,27 @@ public class Sequence extends HttpServlet {
 	
 	@SuppressWarnings("unchecked")
 	private String MockResponse(String mac){
-		JSONObject json = new JSONObject();
 		String MACSII = "0C:DF:A4:71:6D:06";
 		String MACXperia = "D0:51:62:93:E8:CE";
 		String MACNexus5 = "CC:FA:00:16:2B:9A";
 		
-		if (mac.equals(MACXperia)){
-			//TODO also add indicator which says whether device needs to listen for incoming connections
-			json.put("connectto", MACNexus5);
-		} else {
+		
+		//get instructions map object
+		ServletContext ctx = getServletContext();
+		ConcurrentHashMap<String, JSONObject> instructionMap = 
+				(ConcurrentHashMap<String, JSONObject>) ctx.getAttribute("instructionmap");
+		
+		//add mock instructions to the map
+		JSONObject json = new JSONObject();
+		json.put("connectto", MACNexus5);
+		instructionMap.put(mac, json);
+		
+		//find instructions for the device making the request
+		JSONObject instructionsJson = instructionMap.remove(mac);
+		if (instructionsJson != null){
+			return instructionsJson.toString();
 		}
-		return json.toString();
+		else return "";
 	}
 	
 
