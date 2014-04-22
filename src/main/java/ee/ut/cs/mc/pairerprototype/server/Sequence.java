@@ -1,6 +1,7 @@
+package ee.ut.cs.mc.pairerprototype.server;
+
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -11,7 +12,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -30,7 +30,7 @@ public class Sequence extends HttpServlet {
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		response.getOutputStream().println("Hurray !! This Servlet Works");
 
-		WorkThread thread = new WorkThread(); //this instance is created for testing purposes
+//		WorkThread thread = new WorkThread(); //this instance is created for testing purposes
 //		thread.testClustering();
 		
 		try {
@@ -48,6 +48,7 @@ public class Sequence extends HttpServlet {
 		
 	}
 
+	@SuppressWarnings("unchecked")
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		try {
 			String reply = null;
@@ -58,7 +59,7 @@ public class Sequence extends HttpServlet {
 					//add JSON object from request to a queue, from which a WorkThread will gather it and process it
 					JSONObject receivedJson = getJSONFromRequest(request);
 					ServletContext ctx = getServletContext();
-					final BlockingQueue<JSONObject> queue = (LinkedBlockingQueue<JSONObject>) ctx.getAttribute("queue");
+					final BlockingQueue<JSONObject> queue = (LinkedBlockingQueue<JSONObject>) ctx.getAttribute("dataQueue");
 					queue.add(receivedJson);
 					
 					
@@ -76,7 +77,7 @@ public class Sequence extends HttpServlet {
 			if(reply != null){
 				writer.write(reply);	
 			} else {
-				writer.write("im alright");
+				writer.write("no mock response");
 			}
 //			writer.write("Server successfully received your POST");
 			writer.flush();
