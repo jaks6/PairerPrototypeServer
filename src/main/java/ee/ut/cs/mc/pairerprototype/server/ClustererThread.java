@@ -25,7 +25,7 @@ import org.json.simple.parser.JSONParser;
 public class ClustererThread extends Thread {
 	Logger log = Logger.getLogger("ClustererThreads");
 	BlockingQueue<JSONObject> queue = null;
-	HashMap<String, JSONObject> deviceDetailsMap;
+//	HashMap<String, JSONObject> deviceDetailsMap;
 	ConcurrentHashMap<String, JSONObject> instructionsMap;
 	static JSONParser parser;
 
@@ -34,7 +34,7 @@ public class ClustererThread extends Thread {
 		this.queue = queue;
 		this.instructionsMap = instructionsMap;
 		parser =new JSONParser();
-		deviceDetailsMap = new HashMap<String, JSONObject>();
+//		deviceDetailsMap = new HashMap<String, JSONObject>();
 	}
 
 	@Override
@@ -55,10 +55,11 @@ public class ClustererThread extends Thread {
 			System.out.println("Results no of clusters=" + clusters.length);
 			
 			//Provide instructions for each device (and cluster)
+			GroupsManager.getInstance().processClusters(clusters);
 			for (int i=0; i<clusters.length; i++) {
 				log.info("SHOWING CLASSES=" + clusters[i].classes());
 				for (int j=0; j <clusters[i].size(); j++){
-					createInstructions(j, clusters[i]);
+//					createInstructions(j, clusters[i]);
 					//!todo write instructions in an update style
 				}
 			}
@@ -87,6 +88,7 @@ public class ClustererThread extends Thread {
 		log.info("**Storing instructions for="+ deviceMac+ " i="+instanceIndex+", instructions are=" + instructions.toString());
 		instructionsMap.put(deviceMac, instructions);
 	}
+	
 
 	private void fillDataSetFromQueue(DefaultDataset dataset) {
 		while(! queue.isEmpty()){
@@ -97,7 +99,6 @@ public class ClustererThread extends Thread {
 				log.info("--TIMESTAMP--:" + SntpClient.parseMsTimeToHHMMSS(timestamp));
 
 				DenseInstance instance = createNormalizedInstance(json);
-				deviceDetailsMap.put((String)json.get("device"), json);
 				dataset.add(instance);
 			} else {
 

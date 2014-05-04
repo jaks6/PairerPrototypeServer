@@ -26,6 +26,7 @@ public class AppContextListener implements ServletContextListener {
 
 	public static Long timediff = (long) 0;
 	WorkThread thread;
+	GroupsManager groupsManager;
 
 	@Override
 	public void contextInitialized(ServletContextEvent e) {
@@ -37,6 +38,9 @@ public class AppContextListener implements ServletContextListener {
 		ctx.setAttribute("dataQueue", dataQueue);
 		ctx.setAttribute("instructionMap", instructionMap);
 		getDifferenceFromServerTime();
+		
+		groupsManager = GroupsManager.getInstance();
+		groupsManager.setInstructionsMap(instructionMap);
 
 		thread = new WorkThread(dataQueue, instructionMap);
 		thread.start();
