@@ -8,6 +8,7 @@ import net.sf.javaml.core.Dataset;
 import net.sf.javaml.core.Instance;
 
 import org.apache.log4j.Logger;
+import org.json.JSONArray;
 import org.json.simple.JSONObject;
 
 
@@ -69,8 +70,8 @@ public class GroupsManager {
 			
 			for (Dataset ds : clusters){
 				if (ds.classes().contains(instructionReceiver)){
-					instructions.put("group", ds.classes());
-					hostInstructions.put("group", ds.classes());
+					instructions.put("group", new JSONArray(ds.classes()));
+					hostInstructions.put("group", new JSONArray(ds.classes()));
 				}
 			}
 			log.info("**Storing instructions for="+ instructionReceiver+ ", instructions are=" + instructions.toString());
@@ -111,8 +112,10 @@ public class GroupsManager {
 		JSONObject instructions = new JSONObject();
 		if (connectToMac!= null) instructions.put("connectto", connectToMac);
 		instructions.put("listen", beHost);
-		instructions.put("group", ds.classes());
-//		log.info("**Storing instructions for="+ deviceMac+ " i="+instanceIndex+", instructions are=" + instructions.toString());
+		
+		instructions.put("group", new JSONArray(ds.classes()));
+		
+		log.info("**Storing instructions for="+ deviceMac+ " i="+instanceIndex+", instructions are=" + instructions.toString());
 		instructionsMap.put(deviceMac, instructions);
 	}
 

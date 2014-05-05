@@ -94,9 +94,9 @@ public class ClustererThread extends Thread {
 		while(! queue.isEmpty()){
 			JSONObject json = queue.poll();
 			if (json != null) {
-				log.info("Taking : " + json.toJSONString());
+//				log.info("Taking : " + json.toJSONString());
 				long timestamp = (Long) json.get("timestamp");
-				log.info("--TIMESTAMP--:" + SntpClient.parseMsTimeToHHMMSS(timestamp));
+//				log.info("--TIMESTAMP--:" + SntpClient.parseMsTimeToHHMMSS(timestamp));
 
 				DenseInstance instance = createNormalizedInstance(json);
 				dataset.add(instance);

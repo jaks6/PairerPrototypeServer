@@ -13,6 +13,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -78,10 +79,35 @@ public class Sequence extends HttpServlet {
 				(ConcurrentHashMap<String, JSONObject>) ctx.getAttribute("instructionMap");
 		//find instructions for the device making the request
 		log("**Fetching instructions for="+ mac);
+		
+		
+//		createMockInstructions(mac, instructionMap);
+		
+		
 		JSONObject instructionsJson = instructionMap.get(mac);
 		if (instructionsJson != null){
 			return instructionsJson.toString();
 		}
 		return "{}";
+	}
+
+	private void createMockInstructions(String mac,
+			ConcurrentHashMap<String, JSONObject> instructionMap) {
+		instructionMap.clear();
+		String serverMACSII = "0C:DF:A4:71:6D:06";
+		String MACXperia = "D0:51:62:93:E8:CE";
+		String nexus5 = "CC:FA:00:16:2B:9A";
+		
+		JSONObject instruction = new JSONObject();
+		if (mac.equals(nexus5)) instruction.put("connectto", MACXperia);
+		else instruction.put("connectto", nexus5);
+		
+		instruction.put("listento", true);
+		JSONArray group = new JSONArray();
+		group.add("member1");
+		group.add("member2");
+		instruction.put("group", group);
+		
+		instructionMap.put(mac, instruction);
 	}
 }
