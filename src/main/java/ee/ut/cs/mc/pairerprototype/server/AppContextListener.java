@@ -40,7 +40,7 @@ public class AppContextListener implements ServletContextListener {
 		getDifferenceFromServerTime();
 		
 		groupsManager = GroupsManager.getInstance();
-		groupsManager.setInstructionsMap(instructionMap);
+		groupsManager.setInstructionMap(instructionMap);
 
 		thread = new WorkThread(dataQueue, instructionMap);
 		thread.start();
@@ -50,7 +50,6 @@ public class AppContextListener implements ServletContextListener {
 	@Override
 	public void contextDestroyed(ServletContextEvent arg0) {
 		log.info("Context Destroyed");
-
 	}
 
 	private void getDifferenceFromServerTime() {

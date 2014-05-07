@@ -10,15 +10,16 @@ import org.apache.log4j.Logger;
 import org.json.simple.JSONObject;
 
 public class WorkThread extends Thread {
+	private static final int CLUSTERING_INTERVAL = 10000;
 	ScheduledThreadPoolExecutor scheduledExecutor;
-	BlockingQueue<JSONObject> queue = null;
+	BlockingQueue<JSONObject> dataQueue = null;
 	ConcurrentHashMap<String, JSONObject> instructionsMap;
 	static Logger log = Logger.getLogger("WorkThread");
 
-	public WorkThread(BlockingQueue<JSONObject> queue, ConcurrentHashMap<String, JSONObject> instructionsMap) {
+	public WorkThread(BlockingQueue<JSONObject> dataQueue, ConcurrentHashMap<String, JSONObject> instructionsMap) {
 		scheduledExecutor = (ScheduledThreadPoolExecutor)
 				Executors.newScheduledThreadPool(3);
-		this.queue = queue;
+		this.dataQueue = dataQueue;
 		this.instructionsMap = instructionsMap;
 	}
 
@@ -27,7 +28,12 @@ public class WorkThread extends Thread {
 		log.info("WorkThread running.");
 		waitTilTimeSynced();
 		long initialDelay = SntpClient.calculateInitialDelay();
-		scheduledExecutor.scheduleAtFixedRate(new ClustererThread(queue, instructionsMap), initialDelay, 10000, TimeUnit.MILLISECONDS);
+		
+		scheduledExecutor.scheduleAtFixedRate(
+				new ClustererThread(dataQueue, instructionsMap),
+				initialDelay,
+				CLUSTERING_INTERVAL,
+				TimeUnit.MILLISECONDS);
 		
 	}
 

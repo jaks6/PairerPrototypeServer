@@ -15,11 +15,11 @@ import org.json.simple.JSONObject;
 public class GroupsManager {
 	Logger log = Logger.getLogger("GroupsManager");
 	private static GroupsManager instance = null;
-	static ConcurrentHashMap<String, JSONObject> instructionsMap;
+	ConcurrentHashMap<String, JSONObject> instructionsMap;
 	static HashMap<String, String> connectToMap = new HashMap<String, String>();
 	
 	
-	public void setInstructionsMap(
+	public void setInstructionMap(
 			ConcurrentHashMap<String, JSONObject> instructionsMap) {
 		this.instructionsMap = instructionsMap;
 	}
@@ -38,7 +38,7 @@ public class GroupsManager {
 	public void processClusters(Dataset[] clusters) {
 		
 		//!TODO CLEAR OLD INSTRUCTIONS
-		instructionsMap.clear();
+//		instructionsMap.clear();
 		log.info("Going through" + clusters.length + " clusters");
 		//Go through each cluster
 		for (Dataset cluster : clusters){
@@ -70,8 +70,8 @@ public class GroupsManager {
 			
 			for (Dataset ds : clusters){
 				if (ds.classes().contains(instructionReceiver)){
-					instructions.put("group", new JSONArray(ds.classes()));
-					hostInstructions.put("group", new JSONArray(ds.classes()));
+					instructions.put("group", getGroupNicknames(ds));
+					hostInstructions.put("group", getGroupNicknames(ds));
 				}
 			}
 			log.info("**Storing instructions for="+ instructionReceiver+ ", instructions are=" + instructions.toString());
@@ -97,28 +97,16 @@ public class GroupsManager {
 		}
 	}
 	
-	private void createInstructions(int instanceIndex, Dataset ds) {
-		String connectToMac = null;
-		boolean beHost = false;
-		
-		String deviceMac = (String) ds.get(instanceIndex).classValue();
-		/** This device will have no neighbor to be a host for, if
-			the device is first in the chain of devices. */
-		beHost = ( instanceIndex != 0);
-		
-		if (instanceIndex < ds.size()-1 ){
-			connectToMac = (String) ds.get(instanceIndex+1).classValue();
+	
+	private JSONArray getGroupNicknames(Dataset ds){
+		JSONArray nicknames = new JSONArray();
+		for(Instance instance: ds){
+			nicknames.put(((RecordingInstance)instance).getDeviceNickName());
 		}
-		JSONObject instructions = new JSONObject();
-		if (connectToMac!= null) instructions.put("connectto", connectToMac);
-		instructions.put("listen", beHost);
+		return nicknames;
 		
-		instructions.put("group", new JSONArray(ds.classes()));
-		
-		log.info("**Storing instructions for="+ deviceMac+ " i="+instanceIndex+", instructions are=" + instructions.toString());
-		instructionsMap.put(deviceMac, instructions);
 	}
-
+	
 	/** Compares given device to all of the devices in the given cluster,
 	 * seeing if there are any client / server relations between any pair
 	 * @param deviceInstance

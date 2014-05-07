@@ -26,11 +26,11 @@ public class Sequence extends HttpServlet {
 		response.getOutputStream().println("Get received, but there's nothing here");
 	}
 
-	@SuppressWarnings("unchecked")
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		try {
 			String reply = null;
 			String reqType = request.getHeader("reqtype");
+			
 			if (reqType != null){
 				log("REQUEST TYPE="+ reqType);
 				if (reqType.equals("json")){
@@ -81,8 +81,7 @@ public class Sequence extends HttpServlet {
 		log("**Fetching instructions for="+ mac);
 		
 		
-//		createMockInstructions(mac, instructionMap);
-		
+		createMockInstructions(mac, instructionMap);
 		
 		JSONObject instructionsJson = instructionMap.get(mac);
 		if (instructionsJson != null){

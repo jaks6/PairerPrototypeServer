@@ -1,10 +1,7 @@
 package ee.ut.cs.mc.pairerprototype.server;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
-import java.util.SortedSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -12,7 +9,6 @@ import java.util.concurrent.TimeUnit;
 import net.sf.javaml.clustering.DensityBasedSpatialClustering;
 import net.sf.javaml.core.Dataset;
 import net.sf.javaml.core.DefaultDataset;
-import net.sf.javaml.core.DenseInstance;
 import net.sf.javaml.distance.fastdtw.FastDTW;
 
 import org.apache.commons.math.stat.descriptive.moment.Mean;
@@ -27,13 +23,12 @@ public class ClustererThread extends Thread {
 	BlockingQueue<JSONObject> queue = null;
 //	HashMap<String, JSONObject> deviceDetailsMap;
 	ConcurrentHashMap<String, JSONObject> instructionsMap;
-	static JSONParser parser;
+	static JSONParser parser = new JSONParser();;
 
 	public ClustererThread(BlockingQueue<JSONObject> queue, ConcurrentHashMap<String, JSONObject> instructionsMap) {
 		super();
 		this.queue = queue;
 		this.instructionsMap = instructionsMap;
-		parser =new JSONParser();
 //		deviceDetailsMap = new HashMap<String, JSONObject>();
 	}
 
@@ -45,60 +40,33 @@ public class ClustererThread extends Thread {
 						TimeUnit.MILLISECONDS.convert(System.nanoTime(), TimeUnit.NANOSECONDS) + 
 						AppContextListener.timediff));
 		
-		
+		//!TODO : add filter for too old timestamps 
 		DefaultDataset dataset = new DefaultDataset();
 		fillDataSetFromQueue(dataset);
 		if(!dataset.isEmpty()){
 			log.info("Clustering dataset of"+ dataset.size() + " elements");
 			log.info(dataset.toString());
+			
 			Dataset[] clusters = runClusterer(dataset);
 			System.out.println("Results no of clusters=" + clusters.length);
 			
-			//Provide instructions for each device (and cluster)
 			GroupsManager.getInstance().processClusters(clusters);
+			//Provide instructions for each device (and cluster)
 			for (int i=0; i<clusters.length; i++) {
 				log.info("SHOWING CLASSES=" + clusters[i].classes());
 				for (int j=0; j <clusters[i].size(); j++){
-//					createInstructions(j, clusters[i]);
-					//!todo write instructions in an update style
 				}
 			}
 		}
 		log.info("Stopping clusterer thread");
 	}
 
-	private void createInstructions(int instanceIndex, Dataset ds) {
-		String connectToMac = null;
-		boolean beHost = false;
-		
-		String deviceMac = (String) ds.get(instanceIndex).classValue();
-		/** This device will have no neighbor to be a host for, if
-			the device is first in the chain of devices. */
-		beHost = ( instanceIndex != 0);
-		
-		if (instanceIndex < ds.size()-1 ){
-			connectToMac = (String) ds.get(instanceIndex+1).classValue();
-		}
-		JSONObject instructions = new JSONObject();
-		if (connectToMac!= null) instructions.put("connectto", connectToMac);
-		instructions.put("listen", beHost);
-		JSONArray group = new JSONArray();
-		for (Object groupMember: ds.classes()) group.add((String)groupMember);
-		instructions.put("group", group);
-		log.info("**Storing instructions for="+ deviceMac+ " i="+instanceIndex+", instructions are=" + instructions.toString());
-		instructionsMap.put(deviceMac, instructions);
-	}
-	
-
 	private void fillDataSetFromQueue(DefaultDataset dataset) {
 		while(! queue.isEmpty()){
 			JSONObject json = queue.poll();
 			if (json != null) {
-//				log.info("Taking : " + json.toJSONString());
-				long timestamp = (Long) json.get("timestamp");
-//				log.info("--TIMESTAMP--:" + SntpClient.parseMsTimeToHHMMSS(timestamp));
 
-				DenseInstance instance = createNormalizedInstance(json);
+				RecordingInstance instance = createNormalizedInstance(json);
 				dataset.add(instance);
 			} else {
 
@@ -106,14 +74,14 @@ public class ClustererThread extends Thread {
 		}
 	}
 
-	/** Produces a DenseInstance from the json in which the sample values are normalized.
+	/** Produces a DenseInstance subclass RecordingInstance from the json in which the sample values are normalized.
 	 * NB - this method removes the "sequence" object from the argument json.
 	 * The classvalue of the instance which is used to later identify the device once clustered,
 	 *   will be the MAC address of the device
 	 * @param dataset
 	 * @param json
 	 */
-	private DenseInstance createNormalizedInstance(JSONObject json) {
+	private RecordingInstance createNormalizedInstance(JSONObject json) {
 		List<Number> sequence = new ArrayList<Number>(
 				(JSONArray) json.remove("sequence"));
 		double[] target = new double[sequence.size()];
@@ -121,9 +89,10 @@ public class ClustererThread extends Thread {
 		for (int i = 0; i < target.length; i++) {
 			target[i] = sequence.get(i).doubleValue();
 		}
-		normalizeSeq(target);
-		
-		return new DenseInstance(target, (String)json.get("mac"));
+		double[] normalizedSeq = energy(target);
+		RecordingInstance instance = new RecordingInstance(target, (String)json.get("mac"));
+		instance.setDeviceNickName((String)json.get("nickname"));
+		return instance;
 	}
 
 	private void normalizeSeq(double[] seq) {
@@ -132,6 +101,24 @@ public class ClustererThread extends Thread {
 			seq[i]= seq[i]/mean;
 		}
 	}
+	
+	private double[] energy(double[] seq){
+		final int windowLength = 5;
+		double[] hammondVals = {0.08, 0.54, 1, 0.54, 0.08};
+		int samples = seq.length;
+		double[] result = new double[samples];
+		double sum;
+		for (int i = 0; i<samples-windowLength; i++){
+			sum = 0;
+			for (int w=0; w< windowLength; w++){
+				sum += Math.sqrt((seq[i+w]*seq[i+w])* hammondVals[w]);
+			}
+			result[i] = sum / windowLength;
+		}
+		return result;
+	}
+	
+	
 
 	private Dataset[] runClusterer(Dataset dataset) {
 		FastDTW fastdtw = new FastDTW(5);
