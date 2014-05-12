@@ -21,8 +21,8 @@ public class AppContextListener implements ServletContextListener {
 	final static Logger log = Logger.getLogger("ContextListener");
 	final static String NTP_SERVER = "ntp.estpak.ee";
 	private static final int TIMEOUT_PERIOD = 3000;
-	private static final int REQUEST_INTERVAL_LENGTH = 1100;
-	private static final int NO_OF_REQUESTS = 1;
+	private static final int REQUEST_INTERVAL_LENGTH = 1300;
+	private static final int NO_OF_REQUESTS = 5;
 
 	public static Long timediff = (long) 0;
 	WorkThread thread;

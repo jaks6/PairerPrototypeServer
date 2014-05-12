@@ -1,6 +1,13 @@
 package ee.ut.cs.mc.pairerprototype.server;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -9,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 import net.sf.javaml.clustering.DensityBasedSpatialClustering;
 import net.sf.javaml.core.Dataset;
 import net.sf.javaml.core.DefaultDataset;
+import net.sf.javaml.core.Instance;
 import net.sf.javaml.distance.fastdtw.FastDTW;
 
 import org.apache.commons.math.stat.descriptive.moment.Mean;
@@ -29,7 +37,6 @@ public class ClustererThread extends Thread {
 		super();
 		this.queue = queue;
 		this.instructionsMap = instructionsMap;
-//		deviceDetailsMap = new HashMap<String, JSONObject>();
 	}
 
 	@Override
@@ -45,13 +52,12 @@ public class ClustererThread extends Thread {
 		fillDataSetFromQueue(dataset);
 		if(!dataset.isEmpty()){
 			log.info("Clustering dataset of"+ dataset.size() + " elements");
-			log.info(dataset.toString());
 			
 			Dataset[] clusters = runClusterer(dataset);
-			System.out.println("Results no of clusters=" + clusters.length);
-			
-			GroupsManager.getInstance().processClusters(clusters);
+			System.out.println("Result.		no of clusters=" + clusters.length);
+//			storeClustersToCSV(clusters);
 			//Provide instructions for each device (and cluster)
+			GroupsManager.getInstance().processClusters(clusters);
 			for (int i=0; i<clusters.length; i++) {
 				log.info("SHOWING CLASSES=" + clusters[i].classes());
 				for (int j=0; j <clusters[i].size(); j++){
@@ -59,6 +65,46 @@ public class ClustererThread extends Thread {
 			}
 		}
 		log.info("Stopping clusterer thread");
+	}
+
+	private void storeClustersToCSV(Dataset[] clusters) {
+		String[] clustersString = new String[clusters.length];
+		if (clusters.length==0){
+			clustersString = new String[2];
+			clustersString[0]= "-";
+			clustersString[1]= "-";
+		}
+		for (int i = 0; i< clusters.length; i++){
+			for (Instance is : clusters[i]){
+				clustersString[i] =clustersString[i]+ "___"+((RecordingInstance) is).getDeviceNickName();
+			}
+			clustersString[i].replaceFirst("^\\s+", "");
+		}
+		try
+		{
+			DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+				Date date = new Date();
+	    		File file =new File(dateFormat.format(date)+"test.csv");
+	    		System.out.println(file.getAbsolutePath());
+	    		//if file doesnt exists, then create it
+	    		if(!file.exists()){
+	    			file.createNewFile();
+	    		}
+	 
+	    		//true = append file
+	    		FileWriter fileWritter = new FileWriter(file.getName(),true);
+	    	        BufferedWriter bufferWritter = new BufferedWriter(fileWritter);
+	    	        for (String s : clustersString){
+	    	        	bufferWritter.write(s + ";");
+	    	        }
+	    	        bufferWritter.write("\n");
+	    	        bufferWritter.close();
+		}
+		catch(IOException e)
+		{
+		     e.printStackTrace();
+		} 
+		
 	}
 
 	private void fillDataSetFromQueue(DefaultDataset dataset) {
@@ -89,7 +135,7 @@ public class ClustererThread extends Thread {
 		for (int i = 0; i < target.length; i++) {
 			target[i] = sequence.get(i).doubleValue();
 		}
-		double[] normalizedSeq = energy(target);
+		normalizeSeq(target);
 		RecordingInstance instance = new RecordingInstance(target, (String)json.get("mac"));
 		instance.setDeviceNickName((String)json.get("nickname"));
 		return instance;
