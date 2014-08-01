@@ -81,7 +81,7 @@ public class Sequence extends HttpServlet {
 		log("**Fetching instructions for="+ mac);
 		
 		
-		createMockInstructions(mac, instructionMap);
+//		createMockInstructions(mac, instructionMap);
 		
 		JSONObject instructionsJson = instructionMap.get(mac);
 		if (instructionsJson != null){
