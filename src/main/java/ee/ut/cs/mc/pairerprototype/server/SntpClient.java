@@ -231,7 +231,7 @@ public class SntpClient
 		return delay;
 	}
 	
-	static String parseMsTimeToHHMMSS(Long timestamp) {
+	public static String parseMsTimeToHHMMSS(Long timestamp) {
 		Date date = new Date(timestamp);
 		DateFormat formatter = new SimpleDateFormat("HH:mm:ss:SSS");
 		String dateFormatted = formatter.format(date);

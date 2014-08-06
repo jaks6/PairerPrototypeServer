@@ -1,9 +1,9 @@
 package ee.ut.cs.mc.pairerprototype.server;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import net.sf.javaml.core.Dataset;
 import net.sf.javaml.core.Instance;
@@ -12,10 +12,16 @@ import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.simple.JSONObject;
 
+import ee.ut.cs.mc.pairerprototype.server.clustering.RecordingInstance;
+import ee.ut.cs.mc.pairerprototype.server.rom.ConnectionsTable;
+
 
 public class GroupsManager2 {
 	Logger log = Logger.getLogger("GroupsManager");
 	private static GroupsManager2 instance = null;
+	
+	public HashMap<String, ConnectionsTable> networksMap = new HashMap<>();
+	
 	ConcurrentHashMap<String, JSONObject> instructionsMap;
 	static HashMap<String, String> connectToMap = new HashMap<String, String>();
 	
@@ -39,8 +45,10 @@ public class GroupsManager2 {
 	public void processClusters(Dataset[] clusters) {
 		//Go through each cluster
 		for (Dataset cluster : clusters){
+			
+			
 			//Find highest occurring groupId in cluster
-			String groupId = findGroupId(cluster);
+			String groupId = findMostCommonGroup(cluster);
 			
 			updateNetwork(cluster, groupId);
 		}
@@ -61,16 +69,24 @@ public class GroupsManager2 {
 	}
 	/*** This method creates instructions, manages the links table,e tc */
 	private void updateNetwork(Dataset cluster, String groupId) {
-		// TODO Auto-generated method stub
+		 
+		int desiredNoOfMasters = numberOfMasters(cluster.size());
+		ConnectionsTable networkTable = networksMap.get(groupId);
 		
+		//Check how many original masters exist,verify them and their slaves.
+		networkTable.verifyMasters(cluster);
+		
+		
+		//Add missing masters
+		networkTable.addMissingMasters(cluster, desiredNoOfMasters);
 	}
 
 
 	/*** 
-	Finds the most prominent group id in the cluster
+	Finds the most frequently occurring groupId in the cluster
 	@return the group id, or id "0" if none
 	*/
-	private String findGroupId(Dataset cluster) {
+	private String findMostCommonGroup(Dataset cluster) {
 		//Keep track of each groupId's count in this map
 		HashMap<String, Integer> groupScoresMap = new HashMap<>();
 		
@@ -123,6 +139,22 @@ public class GroupsManager2 {
 			log.info("**Storing instructions for="+ instructionReceiverHost+ ", instructions are=" + hostInstructions.toString());
 			instructionsMap.put(instructionReceiverHost, hostInstructions);
 			instructionsMap.put(instructionReceiver, instructions);
+		}
+	}
+	
+	
+	/** Finds the appropriate number of masters for a Ring Of Masters network, given the
+	 * total number of members. Note that the number of masters is always even here.
+	 * @param groupMemberCount
+	 * @return
+	 */
+	private int numberOfMasters(int groupMemberCount){
+		int alpha = (int) Math.ceil(groupMemberCount / 3.0);
+		if (alpha % 2 == 0){
+			return  alpha;
+		}
+		else {
+			return alpha + 1;
 		}
 	}
 

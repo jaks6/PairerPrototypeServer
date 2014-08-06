@@ -9,6 +9,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import org.json.simple.JSONObject;
 
+import ee.ut.cs.mc.pairerprototype.server.clustering.ClustererThread;
+
 public class WorkThread extends Thread {
 	private static final int CLUSTERING_INTERVAL = 10000;
 	ScheduledThreadPoolExecutor scheduledExecutor;

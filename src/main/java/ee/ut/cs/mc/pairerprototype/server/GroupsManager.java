@@ -11,6 +11,8 @@ import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.simple.JSONObject;
 
+import ee.ut.cs.mc.pairerprototype.server.clustering.RecordingInstance;
+
 
 public class GroupsManager {
 	Logger log = Logger.getLogger("GroupsManager");
