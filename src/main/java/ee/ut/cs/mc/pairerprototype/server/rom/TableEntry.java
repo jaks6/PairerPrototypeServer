@@ -11,7 +11,7 @@ import java.util.Set;
  */
 public class TableEntry {
 
-	public final String mac;
+	public String mac;
 	public HashSet<String> connectToList;
 	public HashSet<String> acceptFromList;
 	

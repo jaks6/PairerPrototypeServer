@@ -52,20 +52,7 @@ public class GroupsManager2 {
 			
 			updateNetwork(cluster, groupId);
 		}
-		//!TODO CLEAR OLD INSTRUCTIONS
 //		instructionsMap.clear();
-		log.info("Going through" + clusters.length + " clusters");
-		//Go through each cluster
-		for (Dataset cluster : clusters){
-			log.info("Going through cluster of size " + cluster.size());
-			for (Instance deviceInstance: cluster){
-				if (!checkIfWasInSameNetwork(deviceInstance, cluster)){
-					//The device is new in the cluster, create instructions for it (see who it should connect to)
-					createInitialInstructions(cluster, deviceInstance);
-				}
-			}
-		}
-		createInstructionJSONsForCluster(clusters);
 	}
 	/*** This method creates instructions, manages the links table,e tc */
 	private void updateNetwork(Dataset cluster, String groupId) {
@@ -73,10 +60,12 @@ public class GroupsManager2 {
 		int desiredNoOfMasters = numberOfMasters(cluster.size());
 		ConnectionsTable networkTable = networksMap.get(groupId);
 		
+		if (desiredNoOfMasters < cluster.size() ) desiredNoOfMasters = networkTable.GetCurrentMasterCount();
+		
 		//Check how many original masters exist,verify them and their slaves.
-		networkTable.verifyMasters(cluster);
+		int oldMastersLost = networkTable.verifyMasters(cluster);
 		
-		
+		networkTable.resizeRingOfMasters(desiredNoOfMasters);
 		//Add missing masters
 		networkTable.addMissingMasters(cluster, desiredNoOfMasters);
 	}

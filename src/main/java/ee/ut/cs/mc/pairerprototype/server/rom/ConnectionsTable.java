@@ -83,16 +83,16 @@ public class ConnectionsTable {
 		TableEntry nodeToRemove = table.get(nodeName);
 		
 		//Ensure other nodes wont listen for connections from this node
-		for (String slave: nodeToRemove.connectToList){
-			removeMasterConnection(nodeName, slave);
+		for (String master: nodeToRemove.connectToList){
+			removeConnection(master, nodeName);
 		}
 		
 		//Ensure other nodes wont connect to this node
-		for (String master: nodeToRemove.acceptFromList){
-			removeSlaveConnection(nodeName, master);
+		for (String slave: nodeToRemove.acceptFromList){
+			removeConnection(nodeName, slave);
 		}
 		
-		table.remove(nodeToRemove);
+		table.remove(nodeName);
 	}
 	
 	private void addSlaveConnection(String slaveName, String masterName){
@@ -105,7 +105,8 @@ public class ConnectionsTable {
 		table.get(slaveName).connectToList.add(masterName);
 		table.get(masterName).acceptFromList.add(slaveName);
 	}
-	private void removeMasterConnection(String masterName, String slaveName){
+	private void removeConnection(String masterName, String slaveName){
+		table.get(masterName).acceptFromList.remove(slaveName);
 		table.get(slaveName).connectToList.remove(masterName);
 	}
 	
@@ -116,9 +117,9 @@ public class ConnectionsTable {
 	public int verifyMasters(Dataset cluster) {
 		int mastersMissing = 0;
 		Iterator<Entry<String, TableEntry>> tableIterator = table.entrySet().iterator();
+		
 		while(tableIterator.hasNext()){
-			Entry<String, TableEntry> entry = tableIterator.next();
-			TableEntry currentNode = entry.getValue();
+			TableEntry currentNode = tableIterator.next().getValue();
 			if (currentNode.isMaster()){
 				if (! cluster.classes().contains(currentNode.mac)){
 					mastersMissing += handleMissingMaster(cluster, currentNode);
@@ -134,34 +135,47 @@ public class ConnectionsTable {
 	 * @return Returns 0 if master has successfully been replaced with its slave, 1 otherwise.
 	 */
 	public int handleMissingMaster(Dataset cluster, TableEntry currentNode) {
-		if (currentNode.acceptFromList.isEmpty()){
-			RemoveMaster(currentNode);
+		boolean masterHasNoSlaves = currentNode.acceptFromList.isEmpty();
+		
+		if (masterHasNoSlaves){
+			deprecateMaster(currentNode);
 			return 1;
-		}
-		else {
-			String replacement = immediateSlaveExists(currentNode, cluster);
+		} else {
+			String replacement = pureSlaveExists(currentNode, cluster);
 			if (replacement != null){
-				ReplaceMaster(currentNode, replacement);
+				replaceMaster(currentNode, replacement);
 				return 0;
 			} else {
+				deprecateMaster(currentNode);
 				return 1;
 			}
 		}
 	}
 
-	public void ReplaceMaster(TableEntry currentNode, String replacement) {
+	public void replaceMaster(TableEntry currentNode, String replacement) {
 		TableEntry replacementEntry = table.get(replacement);
 		replacementEntry.connectToList = currentNode.connectToList;
 		currentNode.acceptFromList.remove(replacement);
 		replacementEntry.acceptFromList = currentNode.acceptFromList;
 		
 		int oldMastersRingIndex = mastersList.indexOf(currentNode.mac);
+		int rightNeighbour = (oldMastersRingIndex < mastersList.size() ) ? oldMastersRingIndex +1 : 0;
+		int leftNeighbour = (oldMastersRingIndex < 1 ) ? mastersList.size() -1 : oldMastersRingIndex - 1;
+		
+		//change link with right neighbour
+		table.get(mastersList.get(rightNeighbour)).acceptFromList.remove(currentNode.mac);
+		table.get(mastersList.get(rightNeighbour)).acceptFromList.add(replacement);
+		
+		//change link with right neighbour
+		table.get(mastersList.get(leftNeighbour)).acceptFromList.remove(currentNode.mac);
+		table.get(mastersList.get(leftNeighbour)).acceptFromList.add(replacement);
+		
 		mastersList.set(oldMastersRingIndex, replacement);
 		table.remove(currentNode.mac);
 	}
 
 	/** Determines if atleast one of the masters slaves also exists in the network, returns it if so */
-	private String immediateSlaveExists(TableEntry master, Dataset cluster) {
+	private String pureSlaveExists(TableEntry master, Dataset cluster) {
 		for (String slave: master.acceptFromList){
 			if (cluster.classes().contains(slave) &&  //If the slave exists in the current cluster
 					! table.get(slave).isMaster()){		//and isnt already a master
@@ -171,16 +185,32 @@ public class ConnectionsTable {
 		return null;
 	}
 
-	private void RemoveMaster(TableEntry currentNode) {
+	private void removeMaster(TableEntry currentNode) {
 		//Remove all connections to the master
-		//!TODO replace master with some slave, preferring its own slaves
 		for (String slave : currentNode.connectToList){
-			removeMasterConnection(currentNode.mac, slave);
+			removeConnection(currentNode.mac, slave);
 		}
-		mastersList.remove(currentNode.mac);
-		table.remove(currentNode);
+		
+		int nodeIndex = mastersList.indexOf(currentNode);
+		mastersList.remove(nodeIndex);
+		table.remove(currentNode.mac);
+		
 		currentMasterCount--;
 	}
+	
+	/** Marks the given node as deprecated (needing replacement), by adding a prefix "_" to its hashmap key and 
+	 * setting its TableEntrys mac-value to an empty string.
+	 * @param currentNode
+	 */
+	private void deprecateMaster(TableEntry currentNode) {
+		int nodeIndex = mastersList.indexOf(currentNode);
+		mastersList.set(nodeIndex, "");
+		
+		String deprecatedMasterKey = "_"+currentNode.mac;
+		table.put(deprecatedMasterKey, table.remove(currentNode.mac));
+		table.get(deprecatedMasterKey).mac = "";
+	}
+	
 	
 	public int GetCurrentMasterCount(){
 		return mastersList.size();
@@ -204,6 +234,19 @@ public class ConnectionsTable {
 	public String lastMasterInRing(){
 		return mastersList.get(mastersList.size()-1);
 	}
+
+	/** Appends empty strings to the end of the ring until it is of the new desired size */
+	public void resizeRingOfMasters(int newSize) {
+		for (int i = mastersList.size(); i < newSize; i++){
+			mastersList.add("");
+		}
+	}
 	
+	public ConcurrentHashMap<String, TableEntry> getTable(){
+		return table;
+	}
+	public ArrayList<String> getMastersList(){
+		return mastersList;
+	}
 	
 }

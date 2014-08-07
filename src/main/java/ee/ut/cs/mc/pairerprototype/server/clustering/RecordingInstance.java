@@ -31,4 +31,9 @@ public class RecordingInstance extends DenseInstance{
 	public RecordingInstance(double[] att, Object classValue) {
 		super(att, classValue);
 	}
+	
+	public RecordingInstance(double[] att, Object classValue, String lastGroupId) {
+		super(att, classValue);
+		this.lastGroupId = lastGroupId;
+	}
 }
