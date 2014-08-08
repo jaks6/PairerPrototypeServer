@@ -1,7 +1,9 @@
 package ee.ut.cs.mc.pairerprototype.server;
 
+import java.rmi.UnexpectedException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -14,6 +16,7 @@ import org.json.simple.JSONObject;
 
 import ee.ut.cs.mc.pairerprototype.server.clustering.RecordingInstance;
 import ee.ut.cs.mc.pairerprototype.server.rom.ConnectionsTable;
+import ee.ut.cs.mc.pairerprototype.server.rom.TableEntry;
 
 
 public class GroupsManager2 {
@@ -42,11 +45,9 @@ public class GroupsManager2 {
 		return instance;
 	}
 
-	public void processClusters(Dataset[] clusters) {
+	public void processClusters(Dataset[] clusters) throws UnexpectedException {
 		//Go through each cluster
 		for (Dataset cluster : clusters){
-			
-			
 			//Find highest occurring groupId in cluster
 			String groupId = findMostCommonGroup(cluster);
 			
@@ -54,21 +55,29 @@ public class GroupsManager2 {
 		}
 //		instructionsMap.clear();
 	}
-	/*** This method creates instructions, manages the links table,e tc */
-	private void updateNetwork(Dataset cluster, String groupId) {
+	/*** This method creates instructions, manages the links table,e tc 
+	 * @throws UnexpectedException */
+	private void updateNetwork(Dataset cluster, String groupId) throws UnexpectedException {
 		 
 		int desiredNoOfMasters = numberOfMasters(cluster.size());
 		ConnectionsTable networkTable = networksMap.get(groupId);
 		
-		if (desiredNoOfMasters < cluster.size() ) desiredNoOfMasters = networkTable.GetCurrentMasterCount();
+//		if (desiredNoOfMasters < cluster.size() ) desiredNoOfMasters = networkTable.GetCurrentMasterCount();
 		
 		//Check how many original nodes exist,verify them 
 		int oldMastersLost = networkTable.verifyNodes(cluster);
 		
-		networkTable.resizeRingOfMasters(desiredNoOfMasters);
-		//Add missing masters
+		networkTable.cleanCluster(cluster);
+		networkTable.getMastersList().resizeRingOfMasters(desiredNoOfMasters);
+		
+		//Use up any free new nodes
+		networkTable.addNewNodes(cluster);
+		
+		//Add missing masters using old slaves
 		networkTable.addMissingMasters(cluster, desiredNoOfMasters);
 	}
+
+
 
 
 	/*** 
@@ -138,6 +147,7 @@ public class GroupsManager2 {
 	 * @return
 	 */
 	private int numberOfMasters(int groupMemberCount){
+		if (groupMemberCount < 2) return groupMemberCount;
 		int alpha = (int) Math.ceil(groupMemberCount / 3.0);
 		if (alpha % 2 == 0){
 			return  alpha;

@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
+import net.sf.javaml.core.Instance;
+
 /*** A single row of the table which describes how nodes of the ring of masters
  * network connect to each other.
  * @author jaks
@@ -22,6 +24,21 @@ public class TableEntry {
 		this.mac = mac;
 		this.connectToList = connectToList;
 		this.acceptFromList = acceptFromList;
+	}
+	
+	
+	public TableEntry(String mac) {
+		super();
+		this.mac = mac;
+		this.connectToList = new HashSet<>();
+		this.acceptFromList = new HashSet<>();
+	}
+	
+	public TableEntry(Instance node) {
+		super();
+		this.mac = (String) node.classValue();
+		this.connectToList = new HashSet<>();
+		this.acceptFromList = new HashSet<>();
 	}
 	
 	
