@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 import ee.ut.cs.mc.pairerprototype.server.clustering.RecordingInstance;
@@ -111,20 +112,28 @@ public class ConnectionsTable {
 	}
 	
 	
-	/** Goes through all masters in the table, checking 
+	/** Goes through all nodes in the table, checking 
 	 * if they exist in the provided cluster
 	 * @return */
-	public int verifyMasters(Dataset cluster) {
+	public int verifyNodes(Dataset cluster) {
 		int mastersMissing = 0;
 		Iterator<Entry<String, TableEntry>> tableIterator = table.entrySet().iterator();
 		
 		while(tableIterator.hasNext()){
 			TableEntry currentNode = tableIterator.next().getValue();
-			if (currentNode.isMaster()){
+				boolean contains =cluster.classes().contains(currentNode.mac);
 				if (! cluster.classes().contains(currentNode.mac)){
-					mastersMissing += handleMissingMaster(cluster, currentNode);
+					if (currentNode.isMaster()){
+						mastersMissing += handleMissingMaster(cluster, currentNode);
+					} else {
+						table.remove(currentNode.mac);
+					}
+				} else {
+					//node is verifeid, mark it down
+					SortedSet<Object> classes = cluster.classes();
+					classes.remove(currentNode.mac);
+					cluster.remove(cluster.classIndex(currentNode.mac));
 				}
-			}
 		}
 		return mastersMissing;
 	}
@@ -138,7 +147,7 @@ public class ConnectionsTable {
 		boolean masterHasNoSlaves = currentNode.acceptFromList.isEmpty();
 		
 		if (masterHasNoSlaves){
-			deprecateMaster(currentNode);
+			deprecateMaster(currentNode.mac);
 			return 1;
 		} else {
 			String replacement = pureSlaveExists(currentNode, cluster);
@@ -146,7 +155,7 @@ public class ConnectionsTable {
 				replaceMaster(currentNode, replacement);
 				return 0;
 			} else {
-				deprecateMaster(currentNode);
+				deprecateMaster(currentNode.mac);
 				return 1;
 			}
 		}
@@ -202,12 +211,12 @@ public class ConnectionsTable {
 	 * setting its TableEntrys mac-value to an empty string.
 	 * @param currentNode
 	 */
-	private void deprecateMaster(TableEntry currentNode) {
-		int nodeIndex = mastersList.indexOf(currentNode);
+	private void deprecateMaster(String nodeMac) {
+		int nodeIndex = mastersList.indexOf(nodeMac);
 		mastersList.set(nodeIndex, "");
 		
-		String deprecatedMasterKey = "_"+currentNode.mac;
-		table.put(deprecatedMasterKey, table.remove(currentNode.mac));
+		String deprecatedMasterKey = "_"+nodeMac;
+		table.put(deprecatedMasterKey, table.remove(nodeMac));
 		table.get(deprecatedMasterKey).mac = "";
 	}
 	
@@ -225,6 +234,8 @@ public class ConnectionsTable {
 				//the node is new in the network, add it as a master
 			}
 		}
+		
+		//Didnt find any more free nodes from the cluster, use old slaves
 		
 	}
 	

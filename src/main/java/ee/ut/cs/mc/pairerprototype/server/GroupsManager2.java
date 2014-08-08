@@ -62,8 +62,8 @@ public class GroupsManager2 {
 		
 		if (desiredNoOfMasters < cluster.size() ) desiredNoOfMasters = networkTable.GetCurrentMasterCount();
 		
-		//Check how many original masters exist,verify them and their slaves.
-		int oldMastersLost = networkTable.verifyMasters(cluster);
+		//Check how many original nodes exist,verify them 
+		int oldMastersLost = networkTable.verifyNodes(cluster);
 		
 		networkTable.resizeRingOfMasters(desiredNoOfMasters);
 		//Add missing masters
