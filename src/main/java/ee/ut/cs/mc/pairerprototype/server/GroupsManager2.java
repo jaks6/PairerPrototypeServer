@@ -15,18 +15,19 @@ import org.json.JSONArray;
 import org.json.simple.JSONObject;
 
 import ee.ut.cs.mc.pairerprototype.server.clustering.RecordingInstance;
-import ee.ut.cs.mc.pairerprototype.server.rom.ConnectionsTable;
-import ee.ut.cs.mc.pairerprototype.server.rom.TableEntry;
+import ee.ut.cs.mc.pairerprototype.server.rom.InstructionUtils;
+import ee.ut.cs.mc.pairerprototype.server.rom.MastersRing;
 
 
 public class GroupsManager2 {
 	Logger log = Logger.getLogger("GroupsManager");
 	private static GroupsManager2 instance = null;
 	
-	public HashMap<String, ConnectionsTable> networksMap = new HashMap<>();
+	public HashMap<String, MastersRing> networksMap = new HashMap<>();
 	
 	ConcurrentHashMap<String, JSONObject> instructionsMap;
-	static HashMap<String, String> connectToMap = new HashMap<String, String>();
+	InstructionUtils ct = new InstructionUtils();
+	public static HashMap<String, String> connectToMap = new HashMap<String, String>();
 	
 	
 	public void setInstructionMap(
@@ -50,33 +51,69 @@ public class GroupsManager2 {
 		for (Dataset cluster : clusters){
 			//Find highest occurring groupId in cluster
 			String groupId = findMostCommonGroup(cluster);
-			
-			updateNetwork(cluster, groupId);
+			if (!networksMap.containsKey(groupId)){
+				createNetwork(cluster, groupId);
+			} else {
+				updateNetwork(cluster, groupId);
+			}
+			InstructionUtils.processInstructions(networksMap.get(groupId),instructionsMap);
 		}
 //		instructionsMap.clear();
 	}
+
+	
+	
+	private void createNetwork(Dataset cluster, String groupId) {
+		networksMap.put(groupId, new MastersRing());
+		MastersRing ring = networksMap.get(groupId);
+		int desiredNoOfMasters = noOfMasters(cluster.size());
+		
+		for (int i =0; i < desiredNoOfMasters; i++){
+			Instance node = cluster.remove(0);
+			ring.addMaster(node, i);
+		}
+		
+		for (Instance slave : cluster){
+			ring.addSlave(slave);
+		}
+	}
+	
 	/*** This method creates instructions, manages the links table,e tc 
 	 * @throws UnexpectedException */
 	private void updateNetwork(Dataset cluster, String groupId) throws UnexpectedException {
-		 
-		int desiredNoOfMasters = numberOfMasters(cluster.size());
-		ConnectionsTable networkTable = networksMap.get(groupId);
-		
-//		if (desiredNoOfMasters < cluster.size() ) desiredNoOfMasters = networkTable.GetCurrentMasterCount();
+		MastersRing ring = networksMap.get(groupId);
 		
 		//Check how many original nodes exist,verify them 
-		int oldMastersLost = networkTable.verifyNodes(cluster);
+		int oldMastersLost = ring.verifyNodes(cluster);
+		cleanCluster(cluster, ring);
 		
-		networkTable.cleanCluster(cluster);
-		networkTable.getMastersList().resizeRingOfMasters(desiredNoOfMasters);
+		//!TODO
+//		ring.resizeRingOfMasters();
 		
 		//Use up any free new nodes
-		networkTable.addNewNodes(cluster);
+		ring.addNewNodes(cluster);
 		
 		//Add missing masters using old slaves
-		networkTable.addMissingMasters(cluster, desiredNoOfMasters);
+		ring.addMissingMasters(cluster);
+		
+		//Clean up
+		ring.clearDeprecations();
 	}
 
+
+	/** Removes all nodes from the cluster which already are in the network (verified)*/
+	private void cleanCluster(Dataset cluster, MastersRing ring) {
+			Iterator<Instance> clusterIterator = cluster.iterator();
+			ArrayList<String> allSlaves = ring.getAllSlaves();
+			while ( clusterIterator.hasNext()){
+				String nodeMac = clusterIterator.next().classValue().toString();
+				if (ring.contains(nodeMac) || 
+						allSlaves.contains(nodeMac)){
+					clusterIterator.remove();
+					
+				}
+			}
+	}
 
 
 
@@ -140,13 +177,21 @@ public class GroupsManager2 {
 		}
 	}
 	
-	
+	/** Finds the appropriate number of masters for a Ring Of Masters network, given the
+	 * total number of members.
+	 * @param groupMemberCount
+	 * @return
+	 */
+	private int noOfMasters(int groupMemberCount){
+		if (groupMemberCount < 2) return groupMemberCount;
+		return (int) Math.ceil(groupMemberCount / 3.0);
+	}
 	/** Finds the appropriate number of masters for a Ring Of Masters network, given the
 	 * total number of members. Note that the number of masters is always even here.
 	 * @param groupMemberCount
 	 * @return
 	 */
-	private int numberOfMasters(int groupMemberCount){
+	private int evenNoOfMasters(int groupMemberCount){
 		if (groupMemberCount < 2) return groupMemberCount;
 		int alpha = (int) Math.ceil(groupMemberCount / 3.0);
 		if (alpha % 2 == 0){

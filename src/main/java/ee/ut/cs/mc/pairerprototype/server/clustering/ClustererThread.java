@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.rmi.UnexpectedException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ import org.json.simple.parser.JSONParser;
 
 import ee.ut.cs.mc.pairerprototype.server.AppContextListener;
 import ee.ut.cs.mc.pairerprototype.server.GroupsManager;
+import ee.ut.cs.mc.pairerprototype.server.GroupsManager2;
 import ee.ut.cs.mc.pairerprototype.server.SntpClient;
 
 @SuppressWarnings("unchecked")
@@ -61,7 +63,11 @@ public class ClustererThread extends Thread {
 			System.out.println("Result.		no of clusters=" + clusters.length);
 //			storeClustersToCSV(clusters);
 			//Provide instructions for each device (and cluster)
-			GroupsManager.getInstance().processClusters(clusters);
+			try {
+				GroupsManager2.getInstance().processClusters(clusters);
+			} catch (UnexpectedException e) {
+				e.printStackTrace();
+			}
 			for (int i=0; i<clusters.length; i++) {
 				log.info("SHOWING CLASSES=" + clusters[i].classes());
 				for (int j=0; j <clusters[i].size(); j++){
