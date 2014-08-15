@@ -12,7 +12,7 @@ import net.sf.javaml.core.Dataset;
 import net.sf.javaml.core.Instance;
 
 import org.apache.log4j.Logger;
-import org.json.JSONArray;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import ee.ut.cs.mc.pairerprototype.server.clustering.RecordingInstance;
@@ -51,21 +51,34 @@ public class GroupsManager2 {
 	public void processClusters(Dataset[] clusters) throws UnexpectedException {
 		ageNetworksMap();
 		
+		
 		//Go through each cluster
 		for (Dataset cluster : clusters){
 			//Find highest occurring groupId in cluster
 			String groupId = findMostCommonGroup(cluster);
+			JSONArray groupmembers = getGroupNicknames(cluster);
+			
+			String newGroupId;
 			if (!networksMap.containsKey(groupId)){
-				createNetwork(cluster);
+				newGroupId = createNetwork(cluster);
 			} else {
-				updateNetwork(cluster, groupId);
+				newGroupId = updateNetwork(cluster, groupId);
 			}
-			InstructionUtils.processInstructions(networksMap.get(groupId),instructionsMap, cluster);
+			//Set groupmembers for ring to include them in instructions.
+			networksMap.get(newGroupId).setGroupMembers(groupmembers);
+			InstructionUtils.processInstructions(networksMap.get(newGroupId),instructionsMap);
 		}
 		cleanNetworksMap();
 	}
 
 	
+	private static JSONArray getGroupNicknames(Dataset ds){
+		JSONArray nicknames = new JSONArray();
+		for(Instance instance: ds){
+			nicknames.add(((RecordingInstance)instance).getDeviceNickName());
+		}
+		return nicknames;
+	}
 	/** Goes through all networks in the map and ages them.	 */
 	private void ageNetworksMap() {
 		for (MastersRing ring : networksMap.values()){
@@ -85,10 +98,10 @@ public class GroupsManager2 {
 	}
 
 
-	private void createNetwork(Dataset cluster) {
+	private String createNetwork(Dataset cluster) {
 		String groupId = UUID.randomUUID().toString();
 
-		MastersRing ring = new MastersRing();
+		MastersRing ring = new MastersRing(groupId);
 		int desiredNoOfMasters = noOfMasters(cluster.size());
 		
 		for (int i =0; i < desiredNoOfMasters; i++){
@@ -100,11 +113,12 @@ public class GroupsManager2 {
 			ring.addSlave(slave);
 		}
 		networksMap.put(groupId, ring);
+		return groupId;
 	}
 	
 	/*** This method creates instructions, manages the links table,e tc 
 	 * @throws UnexpectedException */
-	private void updateNetwork(Dataset cluster, String groupId) throws UnexpectedException {
+	private String updateNetwork(Dataset cluster, String groupId) throws UnexpectedException {
 		MastersRing ring = networksMap.remove(groupId);
 		ring.resetAge();
 		groupId = UUID.randomUUID().toString();
@@ -125,6 +139,7 @@ public class GroupsManager2 {
 		//Clean up
 		ring.clearDeprecations();
 		networksMap.put(groupId, ring);
+		return groupId;
 	}
 
 
@@ -199,14 +214,10 @@ public class GroupsManager2 {
 			return alpha + 1;
 		}
 	}
-
-
-	private JSONArray getGroupNicknames(Dataset ds){
-		JSONArray nicknames = new JSONArray();
-		for(Instance instance: ds){
-			nicknames.put(((RecordingInstance)instance).getDeviceNickName());
-		}
-		return nicknames;
-	}
 	
+	public void clearInstructionsMap(){
+		log.info("Instructionsmap size before clearing="+instructionsMap.size());
+		instructionsMap.clear();
+		log.info("Instructionsmap size after clearing="+instructionsMap.size());
+	}
 }

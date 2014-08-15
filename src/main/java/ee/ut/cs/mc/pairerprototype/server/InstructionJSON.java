@@ -14,18 +14,18 @@ public class InstructionJSON extends JSONObject{
 	private static final String ACCEPTFROMKEY = "acceptfrom";
 	private static final String CONNECTTOKEY = "connectto";
 	private static final String GROUPIDKEY = "groupid";
-	private static final String GROUPMEMBERSKEY = "groupmembers";
+	private static final String GROUPMEMBERSKEY = "group";
 
 	
 	/** Constructor for masters instructions */
 	public InstructionJSON(JSONArray acceptFrom,
-			JSONArray connectto,
+			String connectto,
 			String groupID,
 			JSONArray groupmembers) {
 		
 		super();
 		this.put(ACCEPTFROMKEY, acceptFrom);
-		this.put(CONNECTTOKEY, connectto);
+		if (connectto != null)	this.put(CONNECTTOKEY, connectto);
 		this.put(GROUPIDKEY, groupID);
 		this.put(GROUPMEMBERSKEY, groupmembers);
 	}

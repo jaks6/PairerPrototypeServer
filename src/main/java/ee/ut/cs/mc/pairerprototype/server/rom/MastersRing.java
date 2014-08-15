@@ -6,22 +6,24 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.TreeSet;
 
-import org.json.simple.JSONArray;
-
-import ee.ut.cs.mc.pairerprototype.server.clustering.RecordingInstance;
-
 import net.sf.javaml.core.Dataset;
 import net.sf.javaml.core.Instance;
+
+import org.json.simple.JSONArray;
 
 public class MastersRing extends ArrayList<String>{
 
 	private static final int _MaxSlavesPerMaster = 2;
 	private HashMap<String, TreeSet<String>> slaves;
 	private int age;
+	private String id;
+	JSONArray groupmembers;
 
-	public MastersRing() {
+	public MastersRing(String id) {
 		super();
+		this.id = id;
 		this.age = 0;
+		groupmembers = new JSONArray();
 		this.slaves = new HashMap<String, TreeSet<String>>();
 	}
 
@@ -250,9 +252,8 @@ public class MastersRing extends ArrayList<String>{
 		return getRightNeighbour(indexOf(master));
 	}
 
-
 	public String getId() {
-		return "007";
+		return id;
 	}
 
 	public int getAge() {
@@ -260,6 +261,11 @@ public class MastersRing extends ArrayList<String>{
 	}
 	public void ageByOne() {
 		this.age++;
+	}
+
+
+	public void setGroupMembers(JSONArray nicks) {
+			this.groupmembers = nicks;
 	}
 
 

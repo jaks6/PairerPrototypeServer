@@ -27,7 +27,6 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 import ee.ut.cs.mc.pairerprototype.server.AppContextListener;
-import ee.ut.cs.mc.pairerprototype.server.GroupsManager;
 import ee.ut.cs.mc.pairerprototype.server.GroupsManager2;
 import ee.ut.cs.mc.pairerprototype.server.SntpClient;
 
@@ -53,6 +52,7 @@ public class ClustererThread extends Thread {
 						TimeUnit.MILLISECONDS.convert(System.nanoTime(), TimeUnit.NANOSECONDS) + 
 						AppContextListener.timediff));
 		
+//		GroupsManager2.getInstance().clearInstructionsMap();
 		//!TODO : add filter for too old timestamps 
 		DefaultDataset dataset = new DefaultDataset();
 		fillDataSetFromQueue(dataset);
@@ -147,6 +147,7 @@ public class ClustererThread extends Thread {
 		}
 		normalizeSeq(target);
 		RecordingInstance instance = new RecordingInstance(target, (String)json.get("mac"));
+		instance.lastGroupId = (String)json.get("lastgroup");
 		instance.setDeviceNickName((String)json.get("nickname"));
 		return instance;
 	}
