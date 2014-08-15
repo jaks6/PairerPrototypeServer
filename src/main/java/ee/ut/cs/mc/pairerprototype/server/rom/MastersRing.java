@@ -8,6 +8,8 @@ import java.util.TreeSet;
 
 import org.json.simple.JSONArray;
 
+import ee.ut.cs.mc.pairerprototype.server.clustering.RecordingInstance;
+
 import net.sf.javaml.core.Dataset;
 import net.sf.javaml.core.Instance;
 
@@ -15,9 +17,11 @@ public class MastersRing extends ArrayList<String>{
 
 	private static final int _MaxSlavesPerMaster = 2;
 	private HashMap<String, TreeSet<String>> slaves;
+	private int age;
 
 	public MastersRing() {
 		super();
+		this.age = 0;
 		this.slaves = new HashMap<String, TreeSet<String>>();
 	}
 
@@ -90,6 +94,10 @@ public class MastersRing extends ArrayList<String>{
 	}
 	public void deprecate(int index){
 		set(index, "");
+	}
+	
+	public void resetAge(){
+		this.age = 0;
 	}
 
 	public String getLastMaster(){
@@ -247,11 +255,12 @@ public class MastersRing extends ArrayList<String>{
 		return "007";
 	}
 
-
-	public JSONArray getMembers() {
-		return null;
+	public int getAge() {
+		return age;
 	}
-
+	public void ageByOne() {
+		this.age++;
+	}
 
 
 }
